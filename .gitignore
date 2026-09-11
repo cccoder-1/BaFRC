@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+checkpoint/
+checkpoints/
+log/
+logs/
+bert-base-uncased/
+
+# Ignore dataset files while keeping the public relation-description pools.
+data/fewrel/*
+!data/fewrel/description_pool.json
+!data/fewrel/README.md
+data/fs_tacred/*
+!data/fs_tacred/description_pool.json
+!data/fs_tacred/README.md
+
+*.pth
+*.pth.tar
+*.pt
+

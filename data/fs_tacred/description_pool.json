@@ -1,0 +1,212 @@
+{
+  "no_relation": [
+    "no relation",
+    "There is no specified TACRED relation between the head and tail entities.",
+    "The head and tail entities are not linked by any TACRED relation."
+  ],
+  "org:alternate_names": [
+    "org alternate names",
+    "The organization is also known by the specified alternate name or abbreviation.",
+    "The organization is also known by the alternate name or abbreviation."
+  ],
+  "org:city_of_headquarters": [
+    "org city of headquarters",
+    "The organization is headquartered in the specified city.",
+    "The organization has its headquarters in the city."
+  ],
+  "org:country_of_headquarters": [
+    "org country of headquarters",
+    "The organization is headquartered in the specified country.",
+    "The organization has its headquarters in the specified country."
+  ],
+  "org:stateorprovince_of_headquarters": [
+    "org stateorprovince of headquarters",
+    "The organization is headquartered in the specified state or province.",
+    "The organization has its headquarters located in the specified state or province."
+  ],
+  "org:dissolved": [
+    "org dissolved",
+    "The organization ceased to exist or stopped operating at the specified time.",
+    "The organization ceased to exist or stopped operating at the specified time."
+  ],
+  "org:founded": [
+    "org founded",
+    "The organization was established at the specified time.",
+    "The organization was founded or established at the specified time."
+  ],
+  "org:founded_by": [
+    "org founded by",
+    "The organization was founded by the specified person or organization.",
+    "The organization was founded by the person or entity specified as its founder."
+  ],
+  "org:member_of": [
+    "org member of",
+    "The organization is a member of the specified larger organization or group.",
+    "The organization is a member of or subordinate to the larger organization or group."
+  ],
+  "org:members": [
+    "org members",
+    "The organization has the specified person, country, or entity as a member.",
+    "The head organization includes the tail entity as a member."
+  ],
+  "org:number_of_employees/members": [
+    "org number of employees/members",
+    "The organization has the specified number of employees or members.",
+    "The organization has the specified number of employees or members."
+  ],
+  "org:parents": [
+    "org parents",
+    "The organization is owned or controlled by the specified parent organization.",
+    "The head organization is a subsidiary or division owned or controlled by the tail parent organization."
+  ],
+  "org:political/religious_affiliation": [
+    "org political/religious affiliation",
+    "The organization is affiliated with the specified political or religious group.",
+    "The organization is affiliated with a political ideology or religious tradition."
+  ],
+  "org:shareholders": [
+    "org shareholders",
+    "The organization has the specified person or organization as a shareholder.",
+    "The head organization has the tail entity as a shareholder or owner."
+  ],
+  "org:subsidiaries": [
+    "org subsidiaries",
+    "The organization owns or controls the specified subsidiary organization.",
+    "The head organization owns, controls, or has the tail as a subsidiary entity."
+  ],
+  "org:top_members/employees": [
+    "org top members/employees",
+    "The organization has the specified person as a senior member or employee.",
+    "The organization employs or includes the person as a senior leader or executive."
+  ],
+  "org:website": [
+    "org website",
+    "The organization is associated with the specified official website.",
+    "The organization maintains the official website as its primary online presence."
+  ],
+  "per:age": [
+    "per age",
+    "The person has the specified age.",
+    "The person is the specified age in years."
+  ],
+  "per:alternate_names": [
+    "per alternate names",
+    "The person is also known by the specified alternate name or alias.",
+    "The person is known by the alternate name, alias, nickname, or other name variant."
+  ],
+  "per:cause_of_death": [
+    "per cause of death",
+    "The person died from the specified cause.",
+    "The person died as a result of the specified medical condition, injury, or event."
+  ],
+  "per:charges": [
+    "per charges",
+    "The person was accused of the specified criminal charge.",
+    "The person is formally accused or convicted of the specified criminal offense."
+  ],
+  "per:children": [
+    "per children",
+    "The person has the specified person as a child.",
+    "The head person is a parent of the tail person."
+  ],
+  "per:cities_of_residence": [
+    "per cities of residence",
+    "The person lives or has lived in the specified city.",
+    "The person lives or has lived in the city."
+  ],
+  "per:city_of_birth": [
+    "per city of birth",
+    "The person was born in the specified city.",
+    "The person was born in the city."
+  ],
+  "per:city_of_death": [
+    "per city of death",
+    "The person died in the specified city.",
+    "The person died in the city specified as the location of their death."
+  ],
+  "per:countries_of_residence": [
+    "per countries of residence",
+    "The person lives or has lived in the specified country.",
+    "The person resides or has resided in the country."
+  ],
+  "per:country_of_birth": [
+    "per country of birth",
+    "The person was born in the specified country.",
+    "The person was born in the country."
+  ],
+  "per:country_of_death": [
+    "per country of death",
+    "The person died in the specified country.",
+    "The person died in the country specified as the location of their death."
+  ],
+  "per:date_of_birth": [
+    "per date of birth",
+    "The person was born on the specified date.",
+    "The person was born on the specified date."
+  ],
+  "per:date_of_death": [
+    "per date of death",
+    "The person died on the specified date.",
+    "The person died on the specified date."
+  ],
+  "per:employee_of": [
+    "per employee of",
+    "The person works or has worked for the specified organization.",
+    "The person is or was employed by the organization."
+  ],
+  "per:origin": [
+    "per origin",
+    "The person has the specified nationality, ethnicity, or place of origin.",
+    "The person is originally from or holds nationality of the specified country, region, or ethnic group."
+  ],
+  "per:other_family": [
+    "per other family",
+    "The person has the specified person as another family member.",
+    "The head person is a family member of the tail person, excluding spouse, parent, child, or sibling."
+  ],
+  "per:parents": [
+    "per parents",
+    "The person has the specified person as a parent.",
+    "The head person has the tail person as a biological or legal parent."
+  ],
+  "per:religion": [
+    "per religion",
+    "The person is affiliated with the specified religion or belief.",
+    "The person adheres to or is affiliated with the stated religion or belief system."
+  ],
+  "per:schools_attended": [
+    "per schools attended",
+    "The person attended the specified school or educational institution.",
+    "The person attended or graduated from the educational institution."
+  ],
+  "per:siblings": [
+    "per siblings",
+    "The person has the specified person as a sibling.",
+    "The head person and the tail person are siblings."
+  ],
+  "per:spouse": [
+    "per spouse",
+    "The person has or had the specified person as a spouse.",
+    "The head person is or was married to the tail person."
+  ],
+  "per:stateorprovince_of_birth": [
+    "per stateorprovince of birth",
+    "The person was born in the specified state or province.",
+    "The person was born in the specified state, province, or equivalent subnational region."
+  ],
+  "per:stateorprovince_of_death": [
+    "per stateorprovince of death",
+    "The person died in the specified state or province.",
+    "The person died in the specified U.S. state or Canadian province."
+  ],
+  "per:stateorprovinces_of_residence": [
+    "per stateorprovinces of residence",
+    "The person lives or has lived in the specified state or province.",
+    "The person resides or has resided in the specified state or province."
+  ],
+  "per:title": [
+    "per title",
+    "The person holds or held the specified title, role, or position.",
+    "The person holds or has held the specified professional title, role, or position."
+  ]
+}
