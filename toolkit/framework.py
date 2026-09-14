@@ -7,14 +7,6 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 from sklearn.metrics import f1_score
 from tqdm import tqdm
 
-
-def _print_if(condition, *args, **kwargs):
-    if condition:
-        print(*args, **kwargs)
-
-
-
-
 class FewShotREModel(nn.Module):
     def __init__(self, my_sentence_encoder):
         """
@@ -249,8 +241,7 @@ class FewShotREFramework:
             gold_known_ratio = gold_known_count / max(total_count, 1e-12)
             pred_known_ratio = pred_known_count / max(total_count, 1e-12)
 
-            _print_if(
-                (it + 1) % min(100, val_step) == 0,
+            print(
                 'step: {0:4} | loss: {1:2.6f} | acc: {2:3.2f}%, macro_f1: {3:3.2f}% | '
                 'known_acc: {4:3.2f}% | NOTA P/R/F1: {5:3.2f}/{6:3.2f}/{7:3.2f}% | '
                 'target_micro P/R/F1: {8:3.2f}/{9:3.2f}/{10:3.2f}% | '
@@ -290,6 +281,11 @@ class FewShotREFramework:
                     torch.save({'state_dict': model.state_dict()}, save_ckpt)
                     best_metric = score
                     early_stopping_step = 0
+                elif score == 0.0:
+                    print(
+                        "Validation score is 0; early-stopping counter unchanged "
+                        f"({early_stopping_step}/{early_stopping_patience})."
+                    )
                 else:
                     early_stopping_step += 1
                     if (
@@ -315,7 +311,8 @@ class FewShotREFramework:
                 pred_known_count = 0.0
                 total_count = 0.0
 
-        print(f"Training finished: {model_name}")
+        print("\n####################\n")
+        print(f"Finish training {model_name}")
 
     def eval(self,
              model,
@@ -328,10 +325,13 @@ class FewShotREFramework:
              use_joint_reject=False,
              joint_lambda_pref=0.5,
              joint_tau_reject=0.0):
+        print("")
         model.eval()
         if ckpt is None:
+            print("Use val dataset")
             eval_dataset = self.val_data_loader
         else:
+            print("Use test dataset")
             if ckpt != 'none':
                 state_dict = self.__load_model__(ckpt)['state_dict']
                 own_state = model.state_dict()
@@ -340,6 +340,14 @@ class FewShotREFramework:
                         continue
                     own_state[name].copy_(param)
             eval_dataset = test_data_loader
+
+        if use_joint_reject:
+            print(
+                "[EVAL] joint reject enabled: "
+                f"score=(d1-R)-lambda*(d2-d1), lambda={joint_lambda_pref}, tau={joint_tau_reject}"
+            )
+        else:
+            print("[EVAL] joint reject disabled: use original reject rule min_d > R_nearest")
 
         iter_right = 0.0
         iter_f1_macro = 0.0
@@ -435,8 +443,7 @@ class FewShotREFramework:
                 gold_known_ratio = gold_known_count / max(total_count, 1e-12)
                 pred_known_ratio = pred_known_count / max(total_count, 1e-12)
 
-                _print_if(
-                    (it + 1) % max(1, eval_iter // 20) == 0 or (it + 1) == eval_iter,
+                print(
                     '[EVAL] step: {0:4} | acc: {1:3.2f}%, macro_f1: {2:3.2f}% | '
                     'known_acc: {3:3.2f}% | NOTA P/R/F1: {4:3.2f}/{5:3.2f}/{6:3.2f}% | '
                     'target_micro P/R/F1: {7:3.2f}/{8:3.2f}/{9:3.2f}% | '
@@ -457,8 +464,7 @@ class FewShotREFramework:
                     end='\r',
                     flush=True,
                 )
-            if eval_iter > 0:
-                print()
+            print('')
 
         # final summary metrics
         nota_prec = nota_tp / max(nota_tp + nota_fp, 1e-12)
@@ -497,12 +503,15 @@ class FewShotREFramework:
         - 自动根据 batch 形状推断每个 episode 的 query 数
         """
 
+        print("")
         all_pred = []
 
         model.eval()
         if ckpt is None:
-            raise ValueError("A checkpoint is required for online evaluation.")
+            print("No assigned ckpt")
+            assert 0
         else:
+            print("Use test dataset")
             if ckpt != 'none':
                 state_dict = self.__load_model__(ckpt)['state_dict']
                 own_state = model.state_dict()
@@ -556,6 +565,6 @@ class FewShotREFramework:
                             y = -1
                         all_pred.append(y)
 
+            print("all pred len:", len(all_pred))
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(all_pred, f)
-            print(f"Saved {len(all_pred)} predictions to {output_file}")
