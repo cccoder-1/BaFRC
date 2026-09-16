@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # BaFRC — FS-TACRED baseline
 #
-# Runs the original BaFRC setting on FS-TACRED:
+# Runs the formal BaFRC setting on FS-TACRED:
 #   - 5-way 1-shot and 5-way 5-shot
 #   - train/dev episodes generated with seed_123
 #   - evaluation on five independent test episode seeds
+#   - training-only weighted sampling increases known-query episodes
+#   - validation and test retain their original episode order
 #   - FS-TACRED training radius uses blended radius: rho=0.5
 #
 # Usage:
@@ -28,9 +30,9 @@ cd "${REPO_ROOT}"
 # =============================================================================
 # Data
 # =============================================================================
-TACRED_ROOT="${TACRED_ROOT:-./data/fs_tacred}"
-PID2NAME="description_pool"
-PRETRAIN_CKPT="bert-base-uncased"
+TACRED_ROOT="${TACRED_ROOT:-../TACRED_episodes}"
+PID2NAME="${PID2NAME:-description_pool}"
+PRETRAIN_CKPT="${PRETRAIN_CKPT:-../bert-base-uncased}"
 
 TRAIN_1S="train_5w_1s_3q_50K_seed_123"
 VAL_1S="dev_5w_1s_3q_10K_seed_123"
@@ -59,8 +61,7 @@ TEST_SEEDS_5S=(
 N=5
 Q=1
 SEEDS=(${SEEDS:-5})
-SHOTS=(${SHOTS:-5})
-# SHOTS=(${SHOTS:-1 5})
+SHOTS=(${SHOTS:-1 5})
 SKIP_EXISTING="${SKIP_EXISTING:-0}"
 EVAL_ONLY="${EVAL_ONLY:-0}"
 
@@ -70,8 +71,10 @@ EVAL_ONLY="${EVAL_ONLY:-0}"
 BATCH_SIZE=2
 TRAIN_ITER=30000
 VAL_ITER=1000
-TEST_ITER=10000
+# Each test file contains 10,000 episodes; batch size 2 requires 5,000 batches.
+TEST_ITER=5000
 VAL_STEP=1000
+EARLY_STOPPING_PATIENCE=6
 GRAD_ITER=1
 LR=2e-5
 WEIGHT_DECAY=1e-5
@@ -81,9 +84,10 @@ HIDDEN_SIZE=768
 BAFRC_MARGIN=0.15
 BAFRC_CLS_TEMP=10.0
 BAFRC_GAMMA=3.0
-RADIUS_QUANTILE=0.09
-RADIUS_REG=0.1
+RADIUS_QUANTILE="${RADIUS_QUANTILE:-0.10}"
 RADIUS_BLEND_RHO=0.5
+RADIUS_MAX="${RADIUS_MAX:-10}"
+TRAIN_KNOWN_RATIO="${TRAIN_KNOWN_RATIO:-0.3}"
 BAFRC_DIST_TYPE="euclidean"
 USE_STD_DESC="true"
 
@@ -141,6 +145,8 @@ run_one() {
   echo "Setting : 5-way ${K}-shot | seed=${seed}"
   echo "Train   : ${train_file}"
   echo "Val     : ${val_file}"
+  echo "Train known ratio: ${TRAIN_KNOWN_RATIO}"
+  echo "Validation/test sampling: original order"
   echo "Ckpt    : ${ckpt}"
   echo "Log     : ${train_log}"
   echo "============================================================"
@@ -158,14 +164,16 @@ run_one() {
         --batch_size "${BATCH_SIZE}" \
         --train_iter "${TRAIN_ITER}" --val_iter "${VAL_ITER}" \
         --test_iter "${TEST_ITER}" --val_step "${VAL_STEP}" \
+        --early_stopping_patience "${EARLY_STOPPING_PATIENCE}" \
         --grad_iter "${GRAD_ITER}" --lr "${LR}" --weight_decay "${WEIGHT_DECAY}" \
         --max_length "${MAX_LENGTH}" --hidden_size "${HIDDEN_SIZE}" \
         --bafrc_margin "${BAFRC_MARGIN}" \
         --bafrc_cls_temp "${BAFRC_CLS_TEMP}" \
         --bafrc_gamma "${BAFRC_GAMMA}" \
         --radius_quantile "${RADIUS_QUANTILE}" \
-        --radius_reg "${RADIUS_REG}" \
         --radius_blend_rho "${RADIUS_BLEND_RHO}" \
+        --radius_max "${RADIUS_MAX}" \
+        --train_known_ratio "${TRAIN_KNOWN_RATIO}" \
         --bafrc_dist_type "${BAFRC_DIST_TYPE}" \
         --use_std_desc "${USE_STD_DESC}" \
         --save_ckpt "${ckpt}" \
@@ -196,8 +204,8 @@ run_one() {
       --bafrc_cls_temp "${BAFRC_CLS_TEMP}" \
       --bafrc_gamma "${BAFRC_GAMMA}" \
       --radius_quantile "${RADIUS_QUANTILE}" \
-      --radius_reg "${RADIUS_REG}" \
       --radius_blend_rho "${RADIUS_BLEND_RHO}" \
+      --radius_max "${RADIUS_MAX}" \
       --bafrc_dist_type "${BAFRC_DIST_TYPE}" \
       --use_std_desc "${USE_STD_DESC}" \
       --only_test --load_ckpt "${ckpt}" \
@@ -232,15 +240,21 @@ mean = [sum(v[i] for v in valid) / len(valid) for i in range(5)]
 all_target_f1 = ",".join(f"{v[4]:.2f}" for v in valid)
 
 if not summary.exists():
-    summary.write_text("model\\tK\\tseed\\tACC\\tMacroF1\\tTargetP\\tTargetR\\tTargetF1\\tAllTargetF1\\tlog_dir\\n")
+    summary.write_text(
+        "model\\tK\\tseed\\ttrain_known_ratio\\tradius_max\\tACC\\tMacroF1\\t"
+        "TargetP\\tTargetR\\tTargetF1\\tAllTargetF1\\tlog_dir\\n"
+    )
 with summary.open("a") as f:
     f.write(
-        f"BaFRC\\t${K}\\t${seed}\\t"
+        f"BaFRC\\t${K}\\t${seed}\\t${TRAIN_KNOWN_RATIO}\\t${RADIUS_MAX}\\t"
         f"{mean[0]:.2f}\\t{mean[1]:.2f}\\t{mean[2]:.2f}\\t{mean[3]:.2f}\\t{mean[4]:.2f}\\t"
         f"{all_target_f1}\\t{eval_dir}\\n"
     )
 
-print(f"[SUMMARY] K=${K} seed=${seed} | target P/R/F1 = {mean[2]:.2f}/{mean[3]:.2f}/{mean[4]:.2f}")
+print(
+    f"[SUMMARY] K=${K} seed=${seed} | target P/R/F1 = "
+    f"{mean[2]:.2f}/{mean[3]:.2f}/{mean[4]:.2f}"
+)
 PY
 }
 
@@ -248,6 +262,7 @@ echo "============================================================"
 echo "BaFRC FS-TACRED baseline"
 echo "TACRED_ROOT=${TACRED_ROOT}"
 echo "Shots=${SHOTS[*]} | Seeds=${SEEDS[*]}"
+echo "TRAIN_KNOWN_RATIO=${TRAIN_KNOWN_RATIO} | RADIUS_MAX=${RADIUS_MAX}"
 echo "Summary=${SUMMARY_FILE}"
 echo "============================================================"
 

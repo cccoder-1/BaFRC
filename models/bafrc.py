@@ -19,7 +19,7 @@ class BaFRC(FewShotREModel):
 
     Prototype:
       - use_std_desc=True:  p_c = (sum_i s_{c,i} + r_c^orig + r_c^std) / (K + 2)
-      - use_std_desc=False: p_c = (sum_i s_{c,i} + r_c^orig) / (K + 1)   # 消融标准化描述
+      - use_std_desc=False: p_c = (sum_i s_{c,i} + r_c^orig) / (K + 1)
 
     Classification (main loss):
       - N-way cross entropy on known queries only (label < N)
@@ -33,7 +33,8 @@ class BaFRC(FewShotREModel):
       ℓ_c^+ = (1/γ) log(1 + Σ exp( γ (d(x,p_c) − R_c)    ))   x∈X_c^+
       ℓ_c^- = (1/γ) log(1 + Σ exp(-γ (d(x,p_c) − R̃_c − m)))   x∈X_c^-
       L_B   = 1/N Σ_c [ ℓ_c^+ + ℓ_c^- ]
-      可通过 bafrc_loss_pos / bafrc_loss_neg 逐项关闭（消融）。
+      The two terms can be disabled independently with bafrc_loss_pos and
+      bafrc_loss_neg for ablation studies.
 
     Total (paper Eq. 16):
       L = L_CE + L_B
@@ -59,7 +60,7 @@ class BaFRC(FewShotREModel):
         radius_blend_rho=0.5,
         radius_detach=True,
         radius_max=10.0,
-        # L_B 两个有效开关；半径正则开关仅为旧命令兼容保留。
+        # Active L_B switches; the radius regularization switch is legacy-only.
         bafrc_loss_pos=True,
         bafrc_loss_neg=True,
         bafrc_loss_radius_reg=True,  # legacy compatibility only
@@ -122,9 +123,9 @@ class BaFRC(FewShotREModel):
 
     def _encode_rel_pair_no_nota(self, rel_text, B: int, N: int):
         """
-        use_std_desc=True:  前 2N 条为 [c0_orig,c0_std,...]
-        use_std_desc=False: 前 N 条为各类 orig（dataset 不再喂 std）
-        NOTA 时末尾另有 2 条，不参与此处切片。
+        use_std_desc=True: the first 2N entries are [c0_orig,c0_std,...].
+        use_std_desc=False: the first N entries are class originals.
+        Any trailing NOTA entries are excluded from this slice.
         """
         rel_text_glo, rel_text_loc = self.sentence_encoder(rel_text, cat=False)  # (B*M, D), (B*M, L, D)
         rel_text_loc = torch.mean(rel_text_loc, dim=1)
@@ -148,7 +149,7 @@ class BaFRC(FewShotREModel):
     def _build_prototypes(self, support_h: torch.Tensor, rel_orig: torch.Tensor, rel_std: torch.Tensor) -> torch.Tensor:
         """
         support_h: (B, N, K, d)
-        rel_orig/std: (B, N, d)；无 std 时 rel_std 为占位，不参与求均值
+        rel_orig/std: (B, N, d); without std, rel_std is an unused placeholder.
         """
         B, N, K, d = support_h.shape
         sup_sum = support_h.sum(dim=2)  # (B,N,d)
@@ -325,7 +326,8 @@ class BaFRC(FewShotREModel):
         if known.any():
             loss_ce = F.cross_entropy(logits_nway[known], query_label[known])
         else:
-            loss_ce = logits_nway.new_tensor(0.0)
+            # Keep a zero loss connected to the graph for pure-NOTA batches.
+            loss_ce = logits_nway.sum() * 0.0
 
         dists_q = self._cache.get("dists_q", None)
         if dists_q is None:
@@ -333,9 +335,9 @@ class BaFRC(FewShotREModel):
 
         # Training radius: support-calibrated + query-refined
         #   R_train = (1-rho) * R_sup + rho * R_qry
-        #   rho=1.0 → pure query-based (FewRel 论文正文设定)
-        #   rho=0.5 → blended        (FS-TACRED 论文附录设定)
-        #   rho=0.0 → pure support   (train/inference 完全一致的消融变体)
+        #   rho=1.0 -> pure query-based (FewRel paper setting)
+        #   rho=0.5 -> blended (FS-TACRED appendix setting)
+        #   rho=0.0 -> pure support (train/inference-consistent ablation)
         radius_context = torch.no_grad() if self.radius_detach else nullcontext()
         with radius_context:
             R_sup = self._cache.get("R_support", None)

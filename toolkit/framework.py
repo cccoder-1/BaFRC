@@ -311,7 +311,6 @@ class FewShotREFramework:
                 pred_known_count = 0.0
                 total_count = 0.0
 
-        print("\n####################\n")
         print(f"Finish training {model_name}")
 
     def eval(self,
@@ -325,7 +324,6 @@ class FewShotREFramework:
              use_joint_reject=False,
              joint_lambda_pref=0.5,
              joint_tau_reject=0.0):
-        print("")
         model.eval()
         if ckpt is None:
             print("Use val dataset")
@@ -376,9 +374,9 @@ class FewShotREFramework:
                         rel_text[k] = rel_text[k].cuda()
                     query_label = query_label.cuda()
         
-                # ---- 关键修改：按实际 batch 反推每个 episode 的 query 数 ----
-                # query_label 现在是一维：长度 = B * total_Q
-                total_Q = query_label.size(0) // B           # 每个 episode 的总 query 数（含 NA）
+                # Infer each episode's query count from the actual batch shape.
+                # query_label is flat with length B * total_Q.
+                total_Q = query_label.size(0) // B           # queries per episode, including NOTA
                 query_label = query_label.view(B, total_Q)   # (B, total_Q)
         
                 logits, pred, _ = model(support, query, rel_text, N, K, Q, total_Q)
@@ -498,12 +496,11 @@ class FewShotREFramework:
              ckpt=None,
              output_file=None):
         """
-        生成 FewRel NOTA 提交文件：
-        - 每个 episode 输出 1 个 label（0..N-1），若预测为 NOTA 输出 -1
-        - 自动根据 batch 形状推断每个 episode 的 query 数
+        Generate a FewRel NOTA submission file:
+        - output one label per episode (0..N-1), or -1 for NOTA
+        - infer the query count per episode from the batch shape
         """
 
-        print("")
         all_pred = []
 
         model.eval()
@@ -535,7 +532,7 @@ class FewShotREFramework:
                     for k in rel_text:
                         rel_text[k] = rel_text[k].cuda()
 
-                # ---- 先根据 batch 形状推断 B 和 total_Q_per_ep ----
+                # Infer B and total_Q_per_ep from the batch shape.
                 key_s = next(iter(support))
                 key_q = next(iter(query))
                 bs_support = int(support[key_s].size(0))  # = actual_B * N * K
@@ -547,7 +544,7 @@ class FewShotREFramework:
                 total_Q_per_ep = bs_query // actual_B
                 total_Q_per_ep = max(1, total_Q_per_ep)
 
-                # 正确的调用：Q 可以仍然传配置里的 Q，total_Q 用真实的 total_Q_per_ep
+                # Keep configured Q while passing the actual total query count.
                 out = model(support, query, rel_text, N, K, Q, total_Q_per_ep)
                 if isinstance(out, (tuple, list)):
                     pred = out[1]
@@ -556,15 +553,14 @@ class FewShotREFramework:
 
                 list_pred = pred.view(-1).cpu().tolist()
 
-                # 每个 episode 取第一个 query 的预测作为提交
+                # Use the first query prediction from each episode for submission.
                 for nn in range(actual_B):
                     idx = nn * total_Q_per_ep
                     if idx < len(list_pred):
                         y = list_pred[idx]
-                        if y == N:  # 模型里的第 N 类是 NOTA
+                        if y == N:  # Class N is NOTA.
                             y = -1
                         all_pred.append(y)
 
-            print("all pred len:", len(all_pred))
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(all_pred, f)

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# BaFRC — FewRel 训练 / 测试脚本
-# 用法：直接编辑下方参数后执行
+# BaFRC — FewRel training and evaluation script
+# Usage: edit the parameters below, then run
 #   bash run_fewrel.sh
-# 或
+# or
 #   chmod +x run_fewrel.sh && ./run_fewrel.sh
 
 set -euo pipefail
 
 # =============================================================================
-# 环境与路径（按需修改）
+# Environment and paths
 # =============================================================================
 PYTHON="${PYTHON:-python}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,7 +16,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
 # =============================================================================
-# 数据路径
+# Data paths
 # =============================================================================
 ROOT="${ROOT:-./data/fewrel}"
 TRAIN="train_wiki"
@@ -26,16 +26,16 @@ PID2NAME="description_pool"
 PRETRAIN_CKPT="bert-base-uncased"
 
 # =============================================================================
-# Few-shot 设置
+# Few-shot settings
 # =============================================================================
 N=5
 K=1
 Q=1
-NA_RATE=5          # 训练使用 50% NOTA；测试会自动覆盖 15% / 30% / 50%
+NA_RATE=5          # Train with 50% NOTA; evaluation covers 15%, 30%, and 50%.
 SEED=5
 
 # =============================================================================
-# 训练超参
+# Training hyperparameters
 # =============================================================================
 BATCH_SIZE=2
 TRAIN_ITER=30000
@@ -49,14 +49,14 @@ MAX_LENGTH=128
 HIDDEN_SIZE=768
 
 # =============================================================================
-# BaFRC 模型超参
+# BaFRC model hyperparameters
 # =============================================================================
 BAFRC_MARGIN=0.15
 BAFRC_CLS_TEMP=10.0
 BAFRC_GAMMA=3.0
 RADIUS_QUANTILE=0.1
 RADIUS_REG=0.1
-RADIUS_BLEND_RHO=1.0              # FewRel: 训练使用纯 query-based radius
+RADIUS_BLEND_RHO=1.0              # FewRel uses a purely query-based training radius.
 BAFRC_DIST_TYPE="euclidean"          # euclidean | cosine
 USE_QUERY_IN_RADIUS="true"         # true | false
 USE_DESC_NEG="true"                # true | false
@@ -68,30 +68,30 @@ BAFRC_LOSS_NEG="true"                # true | false
 BAFRC_LOSS_RADIUS_REG="true"         # true | false
 
 # =============================================================================
-# 运行模式（三选一，把需要的设为 1，其余设为 0）
+# Run mode: set exactly one option to 1.
 # =============================================================================
-MODE_TRAIN=1                       # 1=训练并在结束后自动测试
-MODE_ONLY_TEST=0                   # 1=仅测试（需设置 LOAD_CKPT）
-MODE_TEST_ONLINE=0                 # 1=在线提交测试（需 LOAD_CKPT + TEST_INPUT）
+MODE_TRAIN=1                       # Train and evaluate when training finishes.
+MODE_ONLY_TEST=0                   # Evaluate only; requires LOAD_CKPT.
+MODE_TEST_ONLINE=0                 # Online submission; requires LOAD_CKPT and TEST_INPUT.
 
-# 测试 / 在线提交时使用的 checkpoint（仅 MODE_ONLY_TEST 或 MODE_TEST_ONLINE 时需要）
+# Checkpoint for evaluation or online submission.
 LOAD_CKPT=""
-SAVE_CKPT=""                       # 留空则自动命名保存到 checkpoint/
+SAVE_CKPT=""                       # Leave empty to save under checkpoint/ automatically.
 
-# 在线提交专用（MODE_TEST_ONLINE=1 时填写）
+# Online submission settings
 TEST_INPUT="test_wiki_input-5-1-0.15"
 TEST_OUTPUT="pred-5-1.json"
 
-# 可选：仅加载 encoder 权重（一般留空）
+# Optional encoder-only checkpoint
 ENCODER_CKPT=""
 
 # =============================================================================
-# 日志（留空则只输出到终端）
+# Logging; leave empty to print only to the terminal.
 # =============================================================================
-LOG_FILE=""                        # 例如：log/fewrel-5-1-seed5.log
+LOG_FILE=""                        # Example: log/fewrel-5-1-seed5.log
 
 # =============================================================================
-# 组装命令（一般无需修改）
+# Command assembly
 # =============================================================================
 CMD=(
   "${PYTHON}" train_fewrel.py
@@ -145,19 +145,19 @@ if [[ "${MODE_TRAIN}" -eq 1 ]]; then
   :
 elif [[ "${MODE_ONLY_TEST}" -eq 1 ]]; then
   if [[ -z "${LOAD_CKPT}" ]]; then
-    echo "[ERROR] MODE_ONLY_TEST=1 时必须设置 LOAD_CKPT" >&2
+    echo "[ERROR] MODE_ONLY_TEST=1 requires LOAD_CKPT" >&2
     exit 1
   fi
   CMD+=(--only_test --load_ckpt "${LOAD_CKPT}")
 elif [[ "${MODE_TEST_ONLINE}" -eq 1 ]]; then
   if [[ -z "${LOAD_CKPT}" ]]; then
-    echo "[ERROR] MODE_TEST_ONLINE=1 时必须设置 LOAD_CKPT" >&2
+    echo "[ERROR] MODE_TEST_ONLINE=1 requires LOAD_CKPT" >&2
     exit 1
   fi
   CMD+=(--only_test --test_online --load_ckpt "${LOAD_CKPT}")
   CMD+=(--test_input "${TEST_INPUT}" --test_output "${TEST_OUTPUT}")
 else
-  echo "[ERROR] 请将 MODE_TRAIN / MODE_ONLY_TEST / MODE_TEST_ONLINE 之一设为 1" >&2
+  echo "[ERROR] Set exactly one of MODE_TRAIN, MODE_ONLY_TEST, or MODE_TEST_ONLINE to 1" >&2
   exit 1
 fi
 

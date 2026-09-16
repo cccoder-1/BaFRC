@@ -2,6 +2,7 @@ import json
 import os
 import torch
 import torch.utils.data as data
+from torch.utils.data import WeightedRandomSampler
 
 
 class FSTacredEpisodeDataset(data.Dataset):
@@ -49,6 +50,23 @@ class FSTacredEpisodeDataset(data.Dataset):
 
     def __len__(self):
         return len(self.episodes)
+
+    @staticmethod
+    def _relation(sample):
+        return sample.get("relation", "no_relation")
+
+    def episode_has_known_query(self, index):
+        """Return whether an episode contains at least one support-known query."""
+        episode = self.episodes[index]
+        support_relations = {
+            self._relation(class_samples[0])
+            for class_samples in episode["meta_train"]
+            if class_samples
+        }
+        return any(
+            self._relation(query) in support_relations
+            for query in episode["meta_test"]
+        )
 
     def __getraw__(self, item):
         word, pos1, pos2, mask = self.encoder.tokenize(
@@ -176,15 +194,53 @@ def collate_fn_fs_tacred(data_batch):
 
 
 def get_loader_fs_tacred(name, pid2name, encoder, N, K, Q, na_rate, batch_size, num_workers=0,
-                         collate_fn=collate_fn_fs_tacred, root="./FS-TACRED", use_std_desc=True):
+                         collate_fn=collate_fn_fs_tacred, root="./FS-TACRED", use_std_desc=True,
+                         train_known_ratio=0.0, sampling_seed=0):
     dataset = FSTacredEpisodeDataset(
         name=name, pid2name=pid2name, encoder=encoder, N=N, K=K, Q=Q, na_rate=na_rate,
         root=root, use_std_desc=use_std_desc
     )
+    train_known_ratio = float(train_known_ratio)
+    if not 0.0 <= train_known_ratio <= 1.0:
+        raise ValueError("train_known_ratio must be in [0, 1].")
+
+    sampler = None
+    if train_known_ratio > 0.0:
+        known_flags = [dataset.episode_has_known_query(i) for i in range(len(dataset))]
+        num_known = sum(known_flags)
+        num_nota = len(known_flags) - num_known
+        if num_known == 0 or num_nota == 0:
+            raise ValueError(
+                "Weighted FS-TACRED sampling requires both known and pure-NOTA episodes; "
+                f"found known={num_known}, NOTA={num_nota}."
+            )
+
+        # Give the two strata the requested total probability mass.
+        known_weight = train_known_ratio / num_known
+        nota_weight = (1.0 - train_known_ratio) / num_nota
+        weights = torch.tensor(
+            [known_weight if is_known else nota_weight for is_known in known_flags],
+            dtype=torch.double,
+        )
+        generator = torch.Generator()
+        generator.manual_seed(int(sampling_seed))
+        sampler = WeightedRandomSampler(
+            weights=weights,
+            num_samples=len(dataset),
+            replacement=True,
+            generator=generator,
+        )
+        print(
+            "[FSTacredEpisodeDataset] Training weighted sampling enabled: "
+            f"target_known={train_known_ratio:.3f}, natural_known={num_known / len(dataset):.3f}, "
+            f"known={num_known}, NOTA={num_nota}, seed={int(sampling_seed)}."
+        )
+
     data_loader = data.DataLoader(
         dataset=dataset,
         batch_size=batch_size,
         shuffle=False,
+        sampler=sampler,
         pin_memory=True,
         num_workers=num_workers,
         collate_fn=collate_fn,

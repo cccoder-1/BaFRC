@@ -67,7 +67,7 @@ class FewRelDataset(data.Dataset):
             orig_desc = entry[1] if len(entry) > 1 else ""
             std_desc = entry[2] if len(entry) > 2 else ""
 
-            # 原始描述；可选再追加标准化描述（MRM 消融）
+            # Add the original description and optionally its standardized form.
             rel_text, rel_text_mask = self.__getrel__([rel_name, orig_desc])
             rel_text, rel_text_mask = torch.tensor(rel_text).long(), torch.tensor(rel_text_mask).long()
             relation_set['word'].append(rel_text)
@@ -96,9 +96,9 @@ class FewRelDataset(data.Dataset):
             query_label += [i] * self.Q
 
         if Q_na > 0:
-            # NOTA 描述条数要和上面保持一致：
-            # - use_std_desc=True  -> 每类两条（orig/std），NOTA 也两条 => 2N+2
-            # - use_std_desc=False -> 每类一条（orig），NOTA 一条 => N+1
+            # Keep the number of NOTA descriptions consistent with each class:
+            # - use_std_desc=True: two per class and two for NOTA => 2N+2
+            # - use_std_desc=False: one per class and one for NOTA => N+1
             rel_text, rel_text_mask = self.__getrel__([self.NOTA, self.NOTA_description])
             rel_text, rel_text_mask = torch.tensor(rel_text).long(), torch.tensor(rel_text_mask).long()
             relation_set['word'].append(rel_text)

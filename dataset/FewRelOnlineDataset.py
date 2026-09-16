@@ -72,7 +72,7 @@ class FewRelOnlineDataset(data.Dataset):
 
             pid = pid_list[i]
             if pid not in self.pid2name:
-                # 保底：如果 pid2name 缺失，给空描述，避免崩
+                # Fall back to empty descriptions when pid2name lacks this id.
                 rel_name, orig_desc, std_desc = "", "", ""
             else:
                 entry = self.pid2name[pid]  # [name, orig_desc, std_desc(optional)]

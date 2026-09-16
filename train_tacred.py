@@ -214,6 +214,12 @@ def main():
     parser.add_argument('--K', default=1, type=int, help='K shot')
     parser.add_argument('--Q', default=1, type=int, help='query instances hint')
     parser.add_argument('--batch_size', default=2, type=int, help='batch size')
+    parser.add_argument(
+        '--train_known_ratio',
+        default=0.0,
+        type=float,
+        help='target known-episode ratio for training-only weighted sampling; 0 keeps original order',
+    )
     parser.add_argument('--train_iter', default=30000, type=int, help='num of iters in training')
     parser.add_argument('--val_iter', default=1000, type=int, help='num of iters in validation')
     parser.add_argument('--test_iter', default=10000, type=int, help='num of iters in testing')
@@ -262,6 +268,12 @@ def main():
         type=float,
         help='blend rho for R_train = (1-rho)*R_sup + rho*R_qry (see BaFRC.loss)',
     )
+    parser.add_argument(
+        '--radius_max',
+        default=0.0,
+        type=float,
+        help='maximum Euclidean radius; <=0 disables the upper clamp',
+    )
     parser.add_argument('--use_query_in_radius', type=lambda x: x.lower() == 'true', default=True)
     parser.add_argument('--use_desc_neg', type=lambda x: x.lower() == 'true', default=True)
     parser.add_argument('--bafrc_dist_type', dest='bafrc_dist_type', default='euclidean', type=str)
@@ -283,6 +295,9 @@ def main():
     if opt.na_rate != 0:
         _warn("FS-TACRED uses pre-sampled episodes; force --na_rate=0.")
         opt.na_rate = 0
+    if not 0.0 <= opt.train_known_ratio <= 1.0:
+        _err("--train_known_ratio must be in [0, 1].")
+        sys.exit(1)
 
     if opt.boundary_calibration:
         if not opt.only_test:
@@ -310,6 +325,7 @@ def main():
         radius_quantile=opt.radius_quantile,
         radius_reg=opt.radius_reg,
         radius_blend_rho=opt.radius_blend_rho,
+        radius_max=opt.radius_max,
         use_query_in_radius=opt.use_query_in_radius,
         use_desc_neg=opt.use_desc_neg,
         dist_type=opt.bafrc_dist_type,
@@ -360,7 +376,8 @@ def main():
     # ------------------------------------------------------------------
     train_loader = get_loader_fs_tacred(
         opt.train, opt.pid2name, sentence_encoder, N=opt.N, K=opt.K, Q=opt.Q, na_rate=0,
-        batch_size=opt.batch_size, root=opt.root, use_std_desc=opt.use_std_desc
+        batch_size=opt.batch_size, root=opt.root, use_std_desc=opt.use_std_desc,
+        train_known_ratio=opt.train_known_ratio, sampling_seed=opt.seed
     )
     val_loader = get_loader_fs_tacred(
         opt.val, opt.pid2name, sentence_encoder, N=opt.N, K=opt.K, Q=opt.Q, na_rate=0,
