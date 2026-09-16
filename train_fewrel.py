@@ -74,14 +74,10 @@ def main():
     # BaFRC-specific hyperparams (ignored when model=RoFRC)
     parser.add_argument('--bafrc_margin', dest='bafrc_margin', default=0.15, type=float)
     parser.add_argument('--mrm_margin', dest='bafrc_margin', type=float, help=argparse.SUPPRESS)
-    parser.add_argument('--bafrc_cls_temp', dest='bafrc_cls_temp', default=10.0, type=float)
-    parser.add_argument('--mrm_cls_temp', dest='bafrc_cls_temp', type=float, help=argparse.SUPPRESS)
     parser.add_argument('--bafrc_gamma', dest='bafrc_gamma', default=3.0, type=float,
                         help='BaFRC boundary loss smoothness γ (Eq.13-14)')
     parser.add_argument('--mrm_gamma', dest='bafrc_gamma', type=float, help=argparse.SUPPRESS)
     parser.add_argument('--radius_quantile', default=0.1, type=float)
-    parser.add_argument('--radius_reg', default=0.1, type=float,
-                        help='deprecated compatibility option; radius regularizer has been removed')
     parser.add_argument('--radius_blend_rho', default=0.5, type=float)
     parser.add_argument('--radius_detach', type=lambda x: x.lower() == 'true', default=True,
                         help='detach support/query radius estimation from autograd')
@@ -99,10 +95,6 @@ def main():
     parser.add_argument('--bafrc_loss_neg', dest='bafrc_loss_neg',
                         type=lambda x: x.lower() == 'true', default=True)
     parser.add_argument('--mrm_loss_neg', dest='bafrc_loss_neg', type=lambda x: x.lower() == 'true', help=argparse.SUPPRESS)
-    parser.add_argument('--bafrc_loss_radius_reg', dest='bafrc_loss_radius_reg',
-                        type=lambda x: x.lower() == 'true', default=True,
-                        help='deprecated compatibility option; ignored')
-    parser.add_argument('--mrm_loss_radius_reg', dest='bafrc_loss_radius_reg', type=lambda x: x.lower() == 'true', help=argparse.SUPPRESS)
 
     # std_desc flag:
     #   BaFRC: controls whether prototype uses standardised descriptions
@@ -155,9 +147,7 @@ def main():
             max_len=opt.max_length,
             bafrc_gamma=opt.bafrc_gamma,
             bafrc_margin=opt.bafrc_margin,
-            cls_temp=opt.bafrc_cls_temp,
             radius_quantile=opt.radius_quantile,
-            radius_reg=opt.radius_reg,
             radius_blend_rho=opt.radius_blend_rho,
             radius_detach=opt.radius_detach,
             radius_max=opt.radius_max,
@@ -169,7 +159,6 @@ def main():
             use_std_desc=opt.use_std_desc,
             bafrc_loss_pos=opt.bafrc_loss_pos,
             bafrc_loss_neg=opt.bafrc_loss_neg,
-            bafrc_loss_radius_reg=opt.bafrc_loss_radius_reg,
         )
         prefix = f"BaFRC-FewRel-{opt.N}way-{opt.K}shot-seed{opt.seed}"
     elif model_name == 'RoFRC':

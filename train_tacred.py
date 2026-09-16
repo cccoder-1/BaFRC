@@ -255,13 +255,9 @@ def main():
 
     parser.add_argument('--bafrc_margin', dest='bafrc_margin', default=0.15, type=float)
     parser.add_argument('--mrm_margin', dest='bafrc_margin', type=float, help=argparse.SUPPRESS)
-    parser.add_argument('--bafrc_cls_temp', dest='bafrc_cls_temp', default=10.0, type=float)
-    parser.add_argument('--mrm_cls_temp', dest='bafrc_cls_temp', type=float, help=argparse.SUPPRESS)
     parser.add_argument('--bafrc_gamma', dest='bafrc_gamma', default=3.0, type=float)
     parser.add_argument('--mrm_gamma', dest='bafrc_gamma', type=float, help=argparse.SUPPRESS)
     parser.add_argument('--radius_quantile', default=0.1, type=float)
-    parser.add_argument('--radius_reg', default=0.1, type=float,
-                        help='deprecated compatibility option; radius regularizer has been removed')
     parser.add_argument(
         '--radius_blend_rho',
         default=0.5,
@@ -321,9 +317,7 @@ def main():
         max_len=opt.max_length,
         bafrc_gamma=opt.bafrc_gamma,
         bafrc_margin=opt.bafrc_margin,
-        cls_temp=opt.bafrc_cls_temp,
         radius_quantile=opt.radius_quantile,
-        radius_reg=opt.radius_reg,
         radius_blend_rho=opt.radius_blend_rho,
         radius_max=opt.radius_max,
         use_query_in_radius=opt.use_query_in_radius,

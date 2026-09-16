@@ -93,6 +93,15 @@ class FewShotREFramework:
         f1 = 0.0 if (precision + recall) < 1e-12 else (2 * precision * recall / (precision + recall))
         return precision, recall, f1
 
+    @staticmethod
+    def _forward(model, model_name, support, query, rel_text, B, N, K, Q, total_Q):
+        output = model(support, query, rel_text, N, K, Q, total_Q)
+        if model_name == 'RoFRC':
+            logits, logits_relation, logits_proto, pred = output
+            return logits, pred.view(B, total_Q), (logits_relation, logits_proto)
+        logits, pred, aux = output
+        return logits, pred, aux
+
     def train(self,
               model,
               model_name,
@@ -191,9 +200,14 @@ class FewShotREFramework:
             total_Q = query_label.size(0) // B
             query_label = query_label.view(B, total_Q)
 
-            # BaFRC forward convention: (logits, pred, aux)
-            logits, pred, _ = model(support, query, rel_text, N, K, Q, total_Q)
-            loss = model.loss(logits, None, query_label, N, Q) / float(grad_iter)
+            logits, pred, aux = self._forward(
+                model, model_name, support, query, rel_text, B, N, K, Q, total_Q
+            )
+            if model_name == 'RoFRC':
+                loss = model.loss(logits, aux[0], aux[1], query_label, N, Q)
+            else:
+                loss = model.loss(logits, None, query_label, N, Q)
+            loss = loss / float(grad_iter)
 
             right = model.accuracy(pred, query_label)
             f1_macro = f1_score(y_true=query_label.view(-1).cpu().numpy(), y_pred=pred.cpu().view(-1).numpy(),
@@ -379,7 +393,9 @@ class FewShotREFramework:
                 total_Q = query_label.size(0) // B           # queries per episode, including NOTA
                 query_label = query_label.view(B, total_Q)   # (B, total_Q)
         
-                logits, pred, _ = model(support, query, rel_text, N, K, Q, total_Q)
+                logits, pred, _ = self._forward(
+                    model, model_name, support, query, rel_text, B, N, K, Q, total_Q
+                )
 
                 # Optional offline joint reject at eval time only:
                 # score_joint = (d1 - R_nearest) - lambda_pref * (d2 - d1)
@@ -545,11 +561,10 @@ class FewShotREFramework:
                 total_Q_per_ep = max(1, total_Q_per_ep)
 
                 # Keep configured Q while passing the actual total query count.
-                out = model(support, query, rel_text, N, K, Q, total_Q_per_ep)
-                if isinstance(out, (tuple, list)):
-                    pred = out[1]
-                else:
-                    _, pred = out
+                _, pred, _ = self._forward(
+                    model, model_name, support, query, rel_text,
+                    actual_B, N, K, Q, total_Q_per_ep
+                )
 
                 list_pred = pred.view(-1).cpu().tolist()
 
